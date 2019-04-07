@@ -1,4 +1,5 @@
 *.exe
+**/*exe
 .env
 .vscode/
 .vscode/*
