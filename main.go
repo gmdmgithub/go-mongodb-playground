@@ -10,7 +10,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // User - model for user
@@ -21,11 +20,6 @@ type User struct {
 	CreatedAt primitive.DateTime `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 }
 
-type server struct {
-	db *mongo.Database
-	r  *mux.Router
-}
-
 func init() {
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Fatal problem during initialization: %v\n", err)
@@ -34,7 +28,7 @@ func init() {
 }
 
 func main() {
-	fmt.Println("Welcome to the playground with mongoDB", os.Getenv("DB"))
+	fmt.Println("Welcome to the playground with mongoDB \u2318")
 
 	if err := run(); err != nil {
 		log.Printf("Fatal problem during initialization: %v\n", err)
@@ -54,7 +48,7 @@ func run() error {
 	}
 
 	s := &server{
-		r:  mux.NewRouter(),
+		r:  mux.NewRouter().StrictSlash(true),
 		db: db,
 	}
 	s.routes()

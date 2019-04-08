@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -62,13 +64,17 @@ func configDB(ctx context.Context) (*mongo.Database, error) {
 
 func addUser(db *mongo.Database, usr User, collName string) (string, error) {
 
+	password, err := bcrypt.GenerateFromPassword([]byte(usr.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("addUser: cannot create a password for the user: %v", err)
+	}
 	res, err := db.Collection(collName).InsertOne(context.Background(), bson.D{
 		{"login", usr.Login},
-		{"password", usr.Password},
+		{"password", password},
 		{"createdAt", primitive.DateTime(time.Now().Unix())},
 	})
 	if err != nil {
-		return "", fmt.Errorf("createTask: task for to-do list couldn't be created: %v", err)
+		return "", fmt.Errorf("addUser: task for to-do list couldn't be created: %v", err)
 	}
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
 }
