@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -23,6 +24,7 @@ func (s *server) routes() {
 
 	s.r.HandleFunc("/status", s.handleStatus())
 	s.r.HandleFunc("/admin", s.loginOnly(s.handleAdmin()))
+	s.r.HandleFunc("/users", s.handleAdduser()).Methods("POST")
 }
 
 func (s *server) handleAdmin() http.HandlerFunc {
@@ -52,7 +54,21 @@ func (s *server) handleIndex() http.HandlerFunc {
 
 func (s *server) handleAdduser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println("handleAdduser start")
+		defer log.Println("handleAdduser end")
+		// first add as object
+		user := User{
+			Login:    "test 3",
+			Password: "best",
+		}
 
+		usr, err := addUser(s.db, user, "users")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		if err := json.NewEncoder(w).Encode(&usr); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 
