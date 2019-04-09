@@ -4,33 +4,44 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
 	"sync"
+
+	"github.com/gorilla/mux"
 )
 
 func (s *server) routes() {
 	sd := "/static/"
 	s.r.PathPrefix(sd).Handler(http.StripPrefix(sd, http.FileServer(http.Dir("."+sd))))
-	// set static files to be serve from static dir
-	// s.r.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("./"))))
 
 	// s.r.HandleFunc("/api/", s.handleAPI())
-	// s.r.HandleFunc("/about", s.handleAbout())
-	s.r.HandleFunc("/", s.handleIndex())
 
-	s.r.HandleFunc("/about", s.handleTemaplate("about.html", "base.html"))
+	s.r.HandleFunc("/", s.handleIndex())
+	s.r.HandleFunc("/about", s.handleTemaplate("About me", "navigation.html", "about.html", "footer.html", "base.html"))
+	s.r.HandleFunc("/contact", s.handleTemaplate("Constact me", "navigation.html", "contact.html", "footer.html", "base.html"))
+
+	s.r.HandleFunc("/admin", s.loginOnly(s.handleAdmin()))
+
+	s.r.HandleFunc("/users", s.handleAdduser()).Methods("POST")
 
 	s.r.HandleFunc("/status", s.handleStatus())
-	s.r.HandleFunc("/admin", s.loginOnly(s.handleAdmin()))
-	s.r.HandleFunc("/users", s.handleAdduser()).Methods("POST")
 }
 
 func (s *server) handleAdmin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// TODO add body
 	}
+}
+
+func (s *server) handleIndex() http.HandlerFunc {
+	//
+	return func() http.HandlerFunc {
+		log.Println("handleIndex")
+		return s.handleTemaplate("Home page", "navigation.html", "home.html", "footer.html", "base.html")
+	}()
 }
 
 // handleStatus - function prensers OK answer if everything is ok
@@ -44,18 +55,34 @@ func (s *server) handleStatus() http.HandlerFunc {
 	}
 }
 
-func (s *server) handleIndex() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO return index page
-		fmt.Fprintf(w, `<h1>Hi there - MONGODB playground</h1>
-						<h2>Still under construction ...</h2>`)
-	}
-}
-
 func (s *server) handleAdduser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		log.Println("handleAdduser start")
 		defer log.Println("handleAdduser end")
+
+		rlt, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Panicln("BODY: ", rlt)
+		// take parameters
+		params := mux.Vars(r)
+		for param := range params {
+			log.Println("Params: ", param)
+		}
+
+		// var buf bytes.Buffer
+		// if err := json.NewEncoder(&buf).Encode(data); err != nil {
+		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+		// 	return
+		// }
+		// w.WriteHeader(http.StatusOK)
+		// if _, err := io.Copy(w, &buf); err != nil {
+		// 	log.Println("respond:", err)
+		// }
+
 		// first add as object
 		user := User{
 			Login:    "test 3",
@@ -94,7 +121,7 @@ func (s *server) loginOnly(loged http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (s *server) handleTemaplate(files ...string) http.HandlerFunc {
+func (s *server) handleTemaplate(title string, files ...string) http.HandlerFunc {
 
 	var (
 		init sync.Once
@@ -103,7 +130,8 @@ func (s *server) handleTemaplate(files ...string) http.HandlerFunc {
 	)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Println("handleTemaplate start")
+		log.Println("handleTemaplate start", files)
+		defer log.Println("handleTemaplate end")
 		init.Do(func() {
 			for i, file := range files {
 				files[i] = filepath.Join("templates", file)
@@ -126,7 +154,7 @@ func (s *server) handleTemaplate(files ...string) http.HandlerFunc {
 		data := map[string]string{
 			"name":  "Alex",
 			"age":   "34",
-			"title": "About me",
+			"title": title,
 		}
 		// log.Printf("tpl.Tree.Root.String(): %s\n", tpl.Tree.Root.String())
 		err := tpl.ExecuteTemplate(w, "base", data)
