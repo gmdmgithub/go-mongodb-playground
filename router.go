@@ -38,10 +38,7 @@ func (s *server) handleAdmin() http.HandlerFunc {
 
 func (s *server) handleIndex() http.HandlerFunc {
 	//
-	return func() http.HandlerFunc {
-		log.Println("handleIndex")
-		return s.handleTemaplate("Home page", "navigation.html", "home.html", "footer.html", "base.html")
-	}()
+	return s.handleTemaplate("Home page", "navigation.html", "home.html", "footer.html", "base.html")
 }
 
 // handleStatus - function prensers OK answer if everything is ok
@@ -56,6 +53,7 @@ func (s *server) handleStatus() http.HandlerFunc {
 }
 
 func (s *server) handleAdduser() http.HandlerFunc {
+	counter := 10
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		log.Println("handleAdduser start")
@@ -66,26 +64,30 @@ func (s *server) handleAdduser() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		log.Panicln("BODY: ", rlt)
+		log.Printf("BODY: %+v\n", string(rlt))
 		// take parameters
 		params := mux.Vars(r)
 		for param := range params {
 			log.Println("Params: ", param)
 		}
 
-		// var buf bytes.Buffer
-		// if err := json.NewEncoder(&buf).Encode(data); err != nil {
-		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 	return
-		// }
+		var someData string
+
+		if err := json.NewDecoder(r.Body).Decode(&someData); err != nil {
+			log.Printf("Problem ... %v\n", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Buffer: %+v\n", someData)
 		// w.WriteHeader(http.StatusOK)
 		// if _, err := io.Copy(w, &buf); err != nil {
 		// 	log.Println("respond:", err)
 		// }
 
 		// first add as object
+		counter += counter
 		user := User{
-			Login:    "test 3",
+			Login:    fmt.Sprintf("test %d", counter),
 			Password: "best",
 		}
 
@@ -107,7 +109,7 @@ func (s *server) handlePassword() http.HandlerFunc {
 	}
 }
 
-func (s *server) loginOnly(loged http.HandlerFunc) http.HandlerFunc {
+func (s *server) loginOnly(hf http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Checking if logon")
 		// TODO - implement condition
@@ -116,7 +118,7 @@ func (s *server) loginOnly(loged http.HandlerFunc) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		loged(w, r)
+		hf(w, r)
 
 	}
 }
