@@ -53,6 +53,7 @@ func run() error {
 	s := &server{
 		r:  mux.NewRouter().StrictSlash(true),
 		db: db,
+		c:  ctx,
 	}
 	s.routes()
 

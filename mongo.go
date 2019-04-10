@@ -62,17 +62,14 @@ func configDB(ctx context.Context) (*mongo.Database, error) {
 	return client.Database("test"), nil
 }
 
-func addUser(db *mongo.Database, usr User, collName string) (string, error) {
+func addUser(ctx context.Context, db *mongo.Database, usr User, collName string) (string, error) {
 
 	password, err := bcrypt.GenerateFromPassword([]byte(usr.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", fmt.Errorf("addUser: cannot create a password for the user: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	usr.CreatedAt = primitive.DateTime(time.Now().UnixNano() / 1e6)
+	usr.CreatedAt = primitive.DateTime(time.Now().Add(2*time.Hour).UnixNano() / 1e6)
 	usr.Password = string(password)
 
 	res, err := db.Collection(collName).InsertOne(ctx, usr)

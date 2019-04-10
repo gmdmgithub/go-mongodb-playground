@@ -85,7 +85,7 @@ func (s *server) handleAdduser() http.HandlerFunc {
 		// 	log.Print("respond:", err)
 		// }
 
-		usr, err := addUser(s.db, user, "users")
+		usr, err := addUser(s.c, s.db, user, "users")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
