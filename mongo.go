@@ -10,7 +10,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -69,13 +68,18 @@ func addUser(db *mongo.Database, usr User, collName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("addUser: cannot create a password for the user: %v", err)
 	}
-	res, err := db.Collection(collName).InsertOne(context.Background(), bson.D{
-		{"login", usr.Login},
-		{"password", password},
-		{"createdAt", primitive.DateTime(time.Now().Unix())},
-	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	usr.CreatedAt = primitive.DateTime(time.Now().UnixNano() / 1e6)
+	usr.Password = string(password)
+
+	res, err := db.Collection(collName).InsertOne(ctx, usr)
+
 	if err != nil {
 		return "", fmt.Errorf("addUser: task for to-do list couldn't be created: %v", err)
 	}
+
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
 }

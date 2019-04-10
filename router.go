@@ -53,11 +53,19 @@ func (s *server) handleStatus() http.HandlerFunc {
 }
 
 func (s *server) handleAdduser() http.HandlerFunc {
-	counter := 10
+
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		log.Print("handleAdduser start")
 		defer log.Print("handleAdduser end")
+
+		var user User
+		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+			log.Printf("Problem ... %v\n", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Buffer: %+v\n", user)
 
 		rlt, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -71,25 +79,11 @@ func (s *server) handleAdduser() http.HandlerFunc {
 			log.Print("Params: ", param)
 		}
 
-		var someData string
+		w.WriteHeader(http.StatusOK)
 
-		if err := json.NewDecoder(r.Body).Decode(&someData); err != nil {
-			log.Printf("Problem ... %v\n", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		log.Printf("Buffer: %+v\n", someData)
-		// w.WriteHeader(http.StatusOK)
 		// if _, err := io.Copy(w, &buf); err != nil {
 		// 	log.Print("respond:", err)
 		// }
-
-		// first add as object
-		counter += counter
-		user := User{
-			Login:    fmt.Sprintf("test %d", counter),
-			Password: "best",
-		}
 
 		usr, err := addUser(s.db, user, "users")
 		if err != nil {
@@ -98,6 +92,7 @@ func (s *server) handleAdduser() http.HandlerFunc {
 		if err := json.NewEncoder(w).Encode(&usr); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+
 	}
 }
 
