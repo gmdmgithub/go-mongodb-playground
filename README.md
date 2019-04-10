@@ -11,9 +11,7 @@ mkdir -p $GOPATH/src/github/{your username}/{project name}
 ### Write main.go
 
 ``` bash
-# simply run
-go run ./main.go
-# or build then run ... 
+# build the project
 go build
 # run the execution file
 ./project_name
@@ -25,10 +23,12 @@ go build
 go get go.mongodb.org/mongo-driver/mongo
 ```
 
-### Install dotenv and put it to the map
+### Install other dependecies, dotenv for .env file, mux for router
 
 ``` bash
 go get github.com/joho/godotenv
+go get github.com/
+go get -u github.com/rs/zerolog/log
 ```
 
 ## Version

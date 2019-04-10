@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/rs/zerolog/log"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -58,7 +59,7 @@ func configDB(ctx context.Context) (*mongo.Database, error) {
 		return nil, err
 	}
 
-	log.Println("Connected to the DB!")
+	log.Print("Connected to the DB!")
 	return client.Database("test"), nil
 }
 

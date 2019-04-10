@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"path/filepath"
 	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/zerolog/log"
 )
 
 func (s *server) routes() {
@@ -47,7 +47,7 @@ func (s *server) handleStatus() http.HandlerFunc {
 	// remember this is registring func and this before return is fired only once - like sync.Once
 	state := "OK" //temporary everything is ok
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Println("request for status")
+		log.Print("request for status")
 		fmt.Fprintf(w, state)
 	}
 }
@@ -56,8 +56,8 @@ func (s *server) handleAdduser() http.HandlerFunc {
 	counter := 10
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		log.Println("handleAdduser start")
-		defer log.Println("handleAdduser end")
+		log.Print("handleAdduser start")
+		defer log.Print("handleAdduser end")
 
 		rlt, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -68,7 +68,7 @@ func (s *server) handleAdduser() http.HandlerFunc {
 		// take parameters
 		params := mux.Vars(r)
 		for param := range params {
-			log.Println("Params: ", param)
+			log.Print("Params: ", param)
 		}
 
 		var someData string
@@ -81,7 +81,7 @@ func (s *server) handleAdduser() http.HandlerFunc {
 		log.Printf("Buffer: %+v\n", someData)
 		// w.WriteHeader(http.StatusOK)
 		// if _, err := io.Copy(w, &buf); err != nil {
-		// 	log.Println("respond:", err)
+		// 	log.Print("respond:", err)
 		// }
 
 		// first add as object
@@ -103,15 +103,15 @@ func (s *server) handleAdduser() http.HandlerFunc {
 
 func (s *server) handlePassword() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Println("handlePassword start")
-		defer log.Println("handlePassword end")
+		log.Print("handlePassword start")
+		defer log.Print("handlePassword end")
 
 	}
 }
 
 func (s *server) loginOnly(hf http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Checking if logon")
+		log.Print("Checking if logon")
 		// TODO - implement condition
 		condition := true
 		if !condition {
@@ -132,8 +132,8 @@ func (s *server) handleTemaplate(title string, files ...string) http.HandlerFunc
 	)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Println("handleTemaplate start", files)
-		defer log.Println("handleTemaplate end")
+		log.Print("handleTemaplate start", files)
+		defer log.Print("handleTemaplate end")
 		init.Do(func() {
 			for i, file := range files {
 				files[i] = filepath.Join("templates", file)
@@ -161,7 +161,7 @@ func (s *server) handleTemaplate(title string, files ...string) http.HandlerFunc
 		// log.Printf("tpl.Tree.Root.String(): %s\n", tpl.Tree.Root.String())
 		err := tpl.ExecuteTemplate(w, "base", data)
 		if err != nil {
-			log.Println("Problem with template", err)
+			log.Print("Problem with template", err)
 		}
 
 	}

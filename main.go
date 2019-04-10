@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
+	"github.com/gmdmgithub/mongodb-first/config"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -42,6 +43,8 @@ func run() error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	config.LoadLog()
+
 	db, err := configDB(ctx)
 	if err != nil {
 		return err
@@ -55,7 +58,7 @@ func run() error {
 
 	p, ok := os.LookupEnv("HTTP_PORT")
 	if !ok {
-		log.Println("No http port in .env file, default 8000 taken")
+		log.Print("No http port in .env file, default 8000 taken")
 		p = ":8000"
 	}
 	log.Printf("Server starts at port %s \n", p)
