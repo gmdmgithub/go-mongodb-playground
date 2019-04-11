@@ -19,37 +19,45 @@ func (s *server) routes() {
 
 	// s.r.HandleFunc("/api/", s.handleAPI())
 
-	s.r.HandleFunc("/", s.handleIndex())
+	s.r.HandleFunc("/", s.decor(s.handleIndex()))
 	s.r.HandleFunc("/about", s.handleTemaplate("About me", "navigation.html", "about.html", "footer.html", "base.html"))
 	s.r.HandleFunc("/contact", s.handleTemaplate("Constact me", "navigation.html", "contact.html", "footer.html", "base.html"))
 
-	s.r.HandleFunc("/admin", s.loginOnly(s.handleAdmin()))
-
 	s.r.HandleFunc("/users", s.handleAdduser()).Methods("POST")
+	s.r.HandleFunc("/passwd", s.handlePassword())
 
-	s.r.HandleFunc("/status", s.handleStatus())
+	s.r.HandleFunc("/status", s.handleStatus) // example how to use the simplest way
+	s.r.HandleFunc("/admin", s.loginOnly(s.handleAdmin))
 }
 
-func (s *server) handleAdmin() http.HandlerFunc {
+func (s *server) handleAdmin(w http.ResponseWriter, r *http.Request) {
+
+	// TODO add body
+	fmt.Fprintf(w, "<h1>Hi admin user, you are authorised to access this page!</h1>")
+
+}
+
+func (s *server) handlePassword() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO add body
+		log.Print("handlePassword start")
+		defer log.Print("handlePassword end")
+		fmt.Fprintf(w, "Password set")
 	}
 }
 
 func (s *server) handleIndex() http.HandlerFunc {
-	//
+	//cover path
 	return s.handleTemaplate("Home page", "navigation.html", "home.html", "footer.html", "base.html")
 }
 
 // handleStatus - function prensers OK answer if everything is ok
-func (s *server) handleStatus() http.HandlerFunc {
+func (s *server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	// chack if everyting is ok and set proper value of state
 	// remember this is registring func and this before return is fired only once - like sync.Once
 	state := "OK" //temporary everything is ok
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Print("request for status")
-		fmt.Fprintf(w, state)
-	}
+	log.Print("request for status")
+	fmt.Fprintf(w, state)
+
 }
 
 func (s *server) handleAdduser() http.HandlerFunc {
@@ -96,14 +104,6 @@ func (s *server) handleAdduser() http.HandlerFunc {
 	}
 }
 
-func (s *server) handlePassword() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Print("handlePassword start")
-		defer log.Print("handlePassword end")
-
-	}
-}
-
 func (s *server) loginOnly(hf http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Print("Checking if logon")
@@ -113,9 +113,22 @@ func (s *server) loginOnly(hf http.HandlerFunc) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
+		//passed func will be executed - it could be with conditions (here or decoration - just som akction before/after)
 		hf(w, r)
 
 	}
+}
+
+func (s *server) decor(hf http.HandlerFunc) http.HandlerFunc {
+	//here can be placed first time used code (like doOnce)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.Print("Here you can do some code before ......")
+		hf(w, r)
+		log.Print("Then you can start after part")
+	}
+
 }
 
 func (s *server) handleTemaplate(title string, files ...string) http.HandlerFunc {
