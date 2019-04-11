@@ -8,9 +8,14 @@ import (
 	"net/http"
 	"path/filepath"
 	"sync"
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (s *server) routes() {
@@ -24,10 +29,57 @@ func (s *server) routes() {
 	s.r.HandleFunc("/contact", s.handleTemaplate("Constact me", "navigation.html", "contact.html", "footer.html", "base.html"))
 
 	s.r.HandleFunc("/users", s.handleAdduser()).Methods("POST")
+	s.r.HandleFunc("/users", s.decor(s.handleUsers)).Methods("GET")
 	s.r.HandleFunc("/passwd", s.handlePassword())
 
 	s.r.HandleFunc("/status", s.handleStatus) // example how to use the simplest way
 	s.r.HandleFunc("/admin", s.loginOnly(s.handleAdmin))
+}
+
+func (s *server) handleUsers(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("content-type", "application/json")
+
+	coll, err := s.db.Collection("users").Find(s.c, bson.M{})
+	if err != nil {
+		log.Printf("Problem ... %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	defer coll.Close(s.c)
+
+	var usrs []User
+
+	for coll.Next(s.c) {
+		var usr User
+		err := coll.Decode(&usr)
+		if err != nil {
+			log.Printf("User problem :%T %+v err: %v\n", usr, usr, err)
+			// continue
+		}
+		pass := usr.Password
+
+		if err := bcrypt.CompareHashAndPassword([]byte(pass), []byte("testowe")); err == nil {
+			usr.Password = "testowe"
+		}
+		_, err = json.Marshal(usr.CreatedAt)
+		if err != nil {
+			usr.CreatedAt = primitive.DateTime(time.Now().UnixNano() / int64(time.Millisecond))
+			log.Printf("Date problem :%T %v\n", usr.CreatedAt, usr.CreatedAt)
+		}
+		usrs = append(usrs, usr)
+	}
+	if err := coll.Err(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+		return
+	}
+	// log.Printf("Users: %+v", usrs)
+	if err := json.NewEncoder(w).Encode(usrs); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 }
 
 func (s *server) handleAdmin(w http.ResponseWriter, r *http.Request) {
