@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"sync"
@@ -16,6 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func (s *server) routes() {
@@ -24,21 +24,66 @@ func (s *server) routes() {
 
 	// s.r.HandleFunc("/api/", s.handleAPI())
 
-	s.r.HandleFunc("/", s.decor(s.handleIndex()))
+	s.r.HandleFunc("/", s.jsonDecor(s.handleIndex()))
 	s.r.HandleFunc("/about", s.handleTemaplate("About me", "navigation.html", "about.html", "footer.html", "base.html"))
 	s.r.HandleFunc("/contact", s.handleTemaplate("Constact me", "navigation.html", "contact.html", "footer.html", "base.html"))
 
 	s.r.HandleFunc("/users", s.handleAdduser()).Methods("POST")
-	s.r.HandleFunc("/users", s.decor(s.handleUsers)).Methods("GET")
+	s.r.HandleFunc("/users", s.jsonDecor(s.handleUsers)).Methods("GET")
+	s.r.HandleFunc("/users/{id}", s.jsonDecor(s.handleUser())).Methods("GET")
+	s.r.HandleFunc("/users/{id}", s.jsonDecor(s.handleUpdateUser)).Methods("PUT")
 	s.r.HandleFunc("/passwd", s.handlePassword())
 
 	s.r.HandleFunc("/status", s.handleStatus) // example how to use the simplest way
 	s.r.HandleFunc("/admin", s.loginOnly(s.handleAdmin))
 }
 
-func (s *server) handleUsers(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("content-type", "application/json")
+	var user User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		log.Printf("Problem ... %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Buffer: %+v\n", user)
+
+	params := mux.Vars(r)
+	id, _ := primitive.ObjectIDFromHex(params["id"])
+
+	// filter := bson.D{{"_id", id}} //this cause linent problem
+	filter := bson.D{primitive.E{Key: "_id", Value: id}}
+	var result *mongo.UpdateResult
+	// json.Unmarshal([]byte(`{ "$set": {"year": 1998}}`), &update)
+	// update := bson.D{{"$set", &user}}
+	update := bson.D{primitive.E{Key: "$set", Value: &user}}
+	result, err := s.db.Collection("users").UpdateOne(s.c, filter, update)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+		return
+	}
+	json.NewEncoder(w).Encode(result)
+
+}
+
+func (s *server) handleUser() http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		params := mux.Vars(r)
+		id, _ := primitive.ObjectIDFromHex(params["id"])
+		var usr User
+		err := s.db.Collection("users").FindOne(s.c, User{ID: id}).Decode(&usr)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+			return
+		}
+		json.NewEncoder(w).Encode(usr)
+	}
+}
+
+func (s *server) handleUsers(w http.ResponseWriter, r *http.Request) {
 
 	coll, err := s.db.Collection("users").Find(s.c, bson.M{})
 	if err != nil {
@@ -127,12 +172,12 @@ func (s *server) handleAdduser() http.HandlerFunc {
 		}
 		log.Printf("Buffer: %+v\n", user)
 
-		rlt, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		log.Printf("BODY: %+v\n", string(rlt))
+		// rlt, err := ioutil.ReadAll(r.Body)
+		// if err != nil {
+		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+		// 	return
+		// }
+		// log.Printf("BODY: %+v\n", string(rlt))
 		// take parameters
 		params := mux.Vars(r)
 		for param := range params {
@@ -171,14 +216,13 @@ func (s *server) loginOnly(hf http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (s *server) decor(hf http.HandlerFunc) http.HandlerFunc {
+func (s *server) jsonDecor(hf http.HandlerFunc) http.HandlerFunc {
 	//here can be placed first time used code (like doOnce)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		log.Print("Here you can do some code before ......")
+		w.Header().Set("content-type", "application/json")
 		hf(w, r)
-		log.Print("Then you can start after part")
 	}
 
 }
