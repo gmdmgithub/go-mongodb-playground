@@ -25,17 +25,41 @@ func (s *server) routes() {
 	// s.r.HandleFunc("/api/", s.handleAPI())
 
 	s.r.HandleFunc("/", s.jsonDecor(s.handleIndex()))
-	s.r.HandleFunc("/about", s.handleTemaplate("About me", "navigation.html", "about.html", "footer.html", "base.html"))
-	s.r.HandleFunc("/contact", s.handleTemaplate("Constact me", "navigation.html", "contact.html", "footer.html", "base.html"))
+	s.r.HandleFunc("/about", s.handleTemplate("About me", "navigation.html", "about.html", "footer.html", "base.html"))
+	s.r.HandleFunc("/contact", s.handleTemplate("Constact me", "navigation.html", "contact.html", "footer.html", "base.html"))
 
 	s.r.HandleFunc("/users", s.handleAdduser()).Methods("POST")
 	s.r.HandleFunc("/users", s.jsonDecor(s.handleUsers)).Methods("GET")
 	s.r.HandleFunc("/users/{id}", s.jsonDecor(s.handleUser())).Methods("GET")
 	s.r.HandleFunc("/users/{id}", s.jsonDecor(s.handleUpdateUser)).Methods("PUT")
-	s.r.HandleFunc("/passwd", s.handlePassword())
+	s.r.HandleFunc("/users/{id}", s.jsonDecor(s.handleDeleteUser)).Methods("DELETE")
+	s.r.HandleFunc("/password", s.handlePassword())
 
 	s.r.HandleFunc("/status", s.handleStatus) // example how to use the simplest way
 	s.r.HandleFunc("/admin", s.loginOnly(s.handleAdmin))
+}
+
+func (s *server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+
+	id, err := primitive.ObjectIDFromHex(params["id"])
+	if err != nil {
+		log.Printf("handleDeleteUser: %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	filter := bson.D{primitive.E{Key: "_id", Value: id}}
+	var del *mongo.DeleteResult
+	del, err = s.db.Collection("users").DeleteOne(s.c, filter)
+	if err != nil {
+		log.Printf("handleDeleteUser %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(del)
+
 }
 
 func (s *server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +87,11 @@ func (s *server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{ "message": "` + err.Error() + `" }`))
 		return
 	}
-	json.NewEncoder(w).Encode(result)
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+		// http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 }
 
@@ -79,7 +107,10 @@ func (s *server) handleUser() http.HandlerFunc {
 			w.Write([]byte(`{ "message": "` + err.Error() + `" }`))
 			return
 		}
-		json.NewEncoder(w).Encode(usr)
+		if err := json.NewEncoder(w).Encode(usr); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
@@ -130,7 +161,7 @@ func (s *server) handleUsers(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleAdmin(w http.ResponseWriter, r *http.Request) {
 
 	// TODO add body
-	fmt.Fprintf(w, "<h1>Hi admin user, you are authorised to access this page!</h1>")
+	fmt.Fprintf(w, "<h1>Hi admin user, you are authorized to access this page!</h1>")
 
 }
 
@@ -144,12 +175,12 @@ func (s *server) handlePassword() http.HandlerFunc {
 
 func (s *server) handleIndex() http.HandlerFunc {
 	//cover path
-	return s.handleTemaplate("Home page", "navigation.html", "home.html", "footer.html", "base.html")
+	return s.handleTemplate("Home page", "navigation.html", "home.html", "footer.html", "base.html")
 }
 
-// handleStatus - function prensers OK answer if everything is ok
+// handleStatus - function presents OK answer if everything is ok
 func (s *server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	// chack if everyting is ok and set proper value of state
+	// check if everyting is ok and set proper value of state
 	// remember this is registring func and this before return is fired only once - like sync.Once
 	state := "OK" //temporary everything is ok
 	log.Print("request for status")
@@ -227,7 +258,7 @@ func (s *server) jsonDecor(hf http.HandlerFunc) http.HandlerFunc {
 
 }
 
-func (s *server) handleTemaplate(title string, files ...string) http.HandlerFunc {
+func (s *server) handleTemplate(title string, files ...string) http.HandlerFunc {
 
 	var (
 		init sync.Once
@@ -236,8 +267,8 @@ func (s *server) handleTemaplate(title string, files ...string) http.HandlerFunc
 	)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Print("handleTemaplate start", files)
-		defer log.Print("handleTemaplate end")
+		log.Print("handleTemplate start", files)
+		defer log.Print("handleTemplate end")
 		init.Do(func() {
 			for i, file := range files {
 				files[i] = filepath.Join("templates", file)

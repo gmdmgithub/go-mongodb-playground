@@ -1,0 +1,14 @@
+GET http://localhost:8080/
+
+###
+
+PUT http://localhost:8080/users/5cae6652ae39fb1a072d0296
+
+{
+    "login": "fancy_login",
+    "password": "$2a$10$shzVFXBMMPyVXHTvxZPICe7npJc8RVvoIpuBgNCsERIQGiyewhO56"
+}
+
+###
+
+GET http://localhost:8080/users
