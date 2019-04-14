@@ -12,9 +12,9 @@ mkdir -p $GOPATH/src/github/{your username}/{project name}
 
 ``` bash
 # build the project
-go build
+$ go build
 # run the execution file
-./project_name
+$ ./project_name
 ```
 
 ### Install mongodb driver
@@ -23,7 +23,7 @@ go build
 go get go.mongodb.org/mongo-driver/mongo
 ```
 
-### Install other dependecies, dotenv for .env file, mux for router
+### Install other dependencies, dotenv for .env file, mux for router
 
 ``` bash
 go get github.com/joho/godotenv

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -75,7 +74,7 @@ func (s *server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := primitive.ObjectIDFromHex(params["id"])
 
-	// filter := bson.D{{"_id", id}} //this cause linent problem
+	// filter := bson.D{{"_id", id}} //this cause linnet problem
 	filter := bson.D{primitive.E{Key: "_id", Value: id}}
 	var result *mongo.UpdateResult
 	// json.Unmarshal([]byte(`{ "$set": {"year": 1998}}`), &update)
@@ -100,8 +99,12 @@ func (s *server) handleUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		params := mux.Vars(r)
 		id, _ := primitive.ObjectIDFromHex(params["id"])
+		// log.Printf("ID: %v\n", id)
+
 		var usr User
-		err := s.db.Collection("users").FindOne(s.c, User{ID: id}).Decode(&usr)
+		filter := bson.M{"_id": id}
+		// res := s.db.Collection("users").FindOne(s.c, User{ID: id})
+		err := s.db.Collection("users").FindOne(s.c, filter).Decode(&usr)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{ "message": "` + err.Error() + `" }`))
@@ -116,37 +119,32 @@ func (s *server) handleUser() http.HandlerFunc {
 
 func (s *server) handleUsers(w http.ResponseWriter, r *http.Request) {
 
-	coll, err := s.db.Collection("users").Find(s.c, bson.M{})
+	cur, err := s.db.Collection("users").Find(s.c, bson.D{})
 	if err != nil {
 		log.Printf("Problem ... %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	defer coll.Close(s.c)
+	defer cur.Close(s.c)
 
 	var usrs []User
 
-	for coll.Next(s.c) {
+	for cur.Next(s.c) {
 		var usr User
-		err := coll.Decode(&usr)
+		err := cur.Decode(&usr)
 		if err != nil {
-			log.Printf("User problem :%T %+v err: %v\n", usr, usr, err)
-			// continue
+			log.Printf("User problem err: %v\n", err)
+			// continue // in case problematic are omitted
 		}
 		pass := usr.Password
 
 		if err := bcrypt.CompareHashAndPassword([]byte(pass), []byte("testowe")); err == nil {
 			usr.Password = "testowe"
 		}
-		_, err = json.Marshal(usr.CreatedAt)
-		if err != nil {
-			usr.CreatedAt = primitive.DateTime(time.Now().UnixNano() / int64(time.Millisecond))
-			log.Printf("Date problem :%T %v\n", usr.CreatedAt, usr.CreatedAt)
-		}
 		usrs = append(usrs, usr)
 	}
-	if err := coll.Err(); err != nil {
+	if err := cur.Err(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{ "message": "` + err.Error() + `" }`))
 		return
@@ -181,7 +179,7 @@ func (s *server) handleIndex() http.HandlerFunc {
 // handleStatus - function presents OK answer if everything is ok
 func (s *server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	// check if everyting is ok and set proper value of state
-	// remember this is registring func and this before return is fired only once - like sync.Once
+	// remember this is registering func and this before return is fired only once - like sync.Once
 	state := "OK" //temporary everything is ok
 	log.Print("request for status")
 	fmt.Fprintf(w, state)
@@ -197,7 +195,7 @@ func (s *server) handleAdduser() http.HandlerFunc {
 
 		var user User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-			log.Printf("Problem ... %v\n", err)
+			log.Printf("Problem ... %v \n %+v\n", err, r.Body)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -241,7 +239,7 @@ func (s *server) loginOnly(hf http.HandlerFunc) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		//passed func will be executed - it could be with conditions (here or decoration - just som akction before/after)
+		//passed func will be executed - it could be with conditions (here or decoration - just som action before/after)
 		hf(w, r)
 
 	}

@@ -23,7 +23,7 @@ func LoadLog() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	case "DEBUG":
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	case "NOLEVEL":
+	case "NO_LEVEL":
 		zerolog.SetGlobalLevel(zerolog.NoLevel)
 	case "DISABLED":
 		zerolog.SetGlobalLevel(zerolog.Disabled)

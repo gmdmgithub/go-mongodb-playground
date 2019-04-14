@@ -68,10 +68,14 @@ func addUser(ctx context.Context, db *mongo.Database, usr User, collName string)
 	if err != nil {
 		return "", fmt.Errorf("addUser: cannot create a password for the user: %v", err)
 	}
+	ver := Version{
+		VerTag:  "1.0.1",
+		Created: primitive.DateTime(time.Now().UnixNano() / int64(time.Millisecond)),
+	}
+	// usr.CreatedAt = primitive.DateTime(time.Now().UnixNano() / int64(time.Millisecond))
 
-	usr.CreatedAt = primitive.DateTime(time.Now().UnixNano() / int64(time.Millisecond))
-	
 	usr.Password = string(password)
+	usr.Version = ver
 
 	res, err := db.Collection(collName).InsertOne(ctx, usr)
 

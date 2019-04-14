@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gmdmgithub/mongodb-first/config"
 	"github.com/gorilla/mux"
@@ -13,12 +14,22 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Version -- general struct to kep data about version and audit data
+type Version struct {
+	VerTag     string             `json:"ver_tag,omitempty" bson:"ver_tag,omitempty"`
+	Created    primitive.DateTime `json:"created,omitempty" bson:"created,omitempty"`
+	Updated    time.Time          `json:"updated,omitempty" bson:"updated,omitempty"`
+	UsrCreated primitive.ObjectID `json:"usr_created" bson:"usr_created,omitempty"`
+	UsrUpdated primitive.ObjectID `json:"usr_updated,omitempty" bson:"usr_updated,omitempty"`
+}
+
 // User - model for user
 type User struct {
-	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-	Login     string             `json:"login,omitempty" bson:"login,omitempty"`
-	Password  string             `json:"password,omitempty" bson:"password,omitempty"`
-	CreatedAt primitive.DateTime `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
+	ID       primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	Login    string             `json:"login,omitempty" bson:"login,omitempty"`
+	Password string             `json:"password,omitempty" bson:"password,omitempty"`
+	Version  Version            `json:"version,omitempty" bson:"version,omitempty"`
+	// CreatedAt primitive.DateTime `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 }
 
 func init() {

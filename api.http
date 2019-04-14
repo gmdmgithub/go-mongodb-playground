@@ -12,3 +12,19 @@ PUT http://localhost:8080/users/5cae6652ae39fb1a072d0296
 ###
 
 GET http://localhost:8080/users
+
+###
+DELETE http://localhost:8080/users/5cac6e779fe7955ed303cc8d
+
+###
+POST http://localhost:8080/users HTTP/1.1
+content-type: application/json
+
+{
+	"login":"user with version 2",
+	"password":"testowe"
+
+}
+
+###
+GET http://localhost:8080/users/5cb2012772661f4fbc86548d
