@@ -12,7 +12,7 @@ mkdir -p $GOPATH/src/github/{your username}/{project name}
 
 ``` bash
 # build the project
-$ go build
+$ go build -o mongodb
 # run the execution file
 $ ./project_name
 ```
@@ -38,7 +38,7 @@ go get -u github.com/rs/zerolog/log
 ## Contributing
 
 1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
+2. Creates your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create new Pull Request

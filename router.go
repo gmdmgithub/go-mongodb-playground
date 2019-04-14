@@ -30,12 +30,74 @@ func (s *server) routes() {
 	s.r.HandleFunc("/users", s.handleAdduser()).Methods("POST")
 	s.r.HandleFunc("/users", s.jsonDecor(s.handleUsers)).Methods("GET")
 	s.r.HandleFunc("/users/{id}", s.jsonDecor(s.handleUser())).Methods("GET")
+	s.r.HandleFunc("/filterusers", s.jsonDecor(s.handleFilterUser)).Methods("GET")
 	s.r.HandleFunc("/users/{id}", s.jsonDecor(s.handleUpdateUser)).Methods("PUT")
 	s.r.HandleFunc("/users/{id}", s.jsonDecor(s.handleDeleteUser)).Methods("DELETE")
 	s.r.HandleFunc("/password", s.handlePassword())
 
 	s.r.HandleFunc("/status", s.handleStatus) // example how to use the simplest way
 	s.r.HandleFunc("/admin", s.loginOnly(s.handleAdmin))
+}
+
+func (s *server) handleFilterUser(w http.ResponseWriter, r *http.Request) {
+
+	log.Print("handleFilterUser start")
+	defer log.Print("handleFilterUser end")
+
+	params := r.URL.Query()
+	filter := bson.M{}
+	var id primitive.ObjectID
+	if _, ok := params["id"]; ok {
+		id, _ = primitive.ObjectIDFromHex(params.Get("id"))
+		filter["_id"] = id
+	}
+	if _, ok := params["login"]; ok {
+
+		// filter = bson.M{"login": bson.M{"$regex": params.Get("login")}}//it works!!
+		filter["login"] = bson.M{"$regex": params.Get("login")} //works but with case sensitivity
+		// filter["login"] = bson.M{"$regex": params.Get("login")} //bson.M{{"$options": "i"}
+	}
+
+	cur, err := s.db.Collection("users").Find(s.c, filter)
+	if err != nil {
+		log.Printf("Problem ... %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer cur.Close(s.c)
+
+	var usrs []User
+
+	log.Printf("Cursor: %v", cur)
+
+	for cur.Next(s.c) {
+		log.Print("Hi get result!")
+		var usr User
+		err := cur.Decode(&usr)
+		if err != nil {
+			log.Printf("User problem err: %v\n", err)
+			// continue // in case problematic are omitted
+		}
+		pass := usr.Password
+
+		if err := bcrypt.CompareHashAndPassword([]byte(pass), []byte("testowe")); err == nil {
+			usr.Password = "testowe"
+		}
+		usrs = append(usrs, usr)
+	}
+
+	if err := cur.Err(); err != nil {
+		log.Printf(" cur Problem ... %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+		return
+	}
+	log.Printf("Users: %+v", usrs)
+	if err := json.NewEncoder(w).Encode(usrs); err != nil {
+		log.Printf(" json Problem ... %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 }
 
 func (s *server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -102,8 +164,11 @@ func (s *server) handleUser() http.HandlerFunc {
 		// log.Printf("ID: %v\n", id)
 
 		var usr User
+
 		filter := bson.M{"_id": id}
+		// it doest work for embedded struct
 		// res := s.db.Collection("users").FindOne(s.c, User{ID: id})
+
 		err := s.db.Collection("users").FindOne(s.c, filter).Decode(&usr)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
