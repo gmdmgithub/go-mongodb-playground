@@ -44,7 +44,7 @@ func (s *server) handleFilterUser(w http.ResponseWriter, r *http.Request) {
 
 	log.Print("handleFilterUser start")
 	defer log.Print("handleFilterUser end")
-
+	// #### FIND OPTIONS #######
 	options := options.FindOptions{}
 	// Sort by `login` field descending
 	// options.Sort = bson.D{{"login", -1}}//Composite literal uses unkeyed fields
@@ -52,7 +52,20 @@ func (s *server) handleFilterUser(w http.ResponseWriter, r *http.Request) {
 	options.SetLimit(100)
 	// options.SetSkip(1)//just for test
 
+	// Request variables
+	rvars := mux.Vars(r)
+	for rvar := range rvars {
+		log.Printf("Request variables %v", rvar)
+	}
+
+	// #### FILTER PARAMETERS #######
 	params := r.URL.Query()
+
+	// all params
+	for param := range params {
+		log.Printf("query params %+v ", param)
+	}
+
 	filter := bson.M{}
 	var id primitive.ObjectID
 	// ID requires object ID
@@ -63,7 +76,10 @@ func (s *server) handleFilterUser(w http.ResponseWriter, r *http.Request) {
 	if _, ok := params["login"]; ok {
 
 		// filter = bson.M{"login": bson.M{"$regex": params.Get("login")}}//it works!!
-		filter["login"] = bson.M{"$regex": params.Get("login")}          //works but with case sensitivity
+		// filter["login"] = bson.M{"$regex": params.Get("login")}          //works but with case sensitivity
+
+		// ##### SELECT * FROM USERS WHERE UPPER(LOGIN) LIKE %UPPER(SEARCH_TEXT)%
+
 		filter["login"] = bson.M{"$regex": `(?i)` + params.Get("login")} //this magic works
 
 		// it's a hack - just for test the range
@@ -92,10 +108,8 @@ func (s *server) handleFilterUser(w http.ResponseWriter, r *http.Request) {
 	defer cur.Close(s.c)
 
 	var usrs []User
-	log.Printf("Cursor: %v", cur)
-
+	// CURSOR HAVE NEXT METHOD
 	for cur.Next(s.c) {
-		log.Print("Hi get result!")
 		var usr User
 		err := cur.Decode(&usr)
 		if err != nil {
@@ -105,7 +119,7 @@ func (s *server) handleFilterUser(w http.ResponseWriter, r *http.Request) {
 		pass := usr.Password
 
 		if err := bcrypt.CompareHashAndPassword([]byte(pass), []byte("testowe")); err == nil {
-			usr.Password = "testowe"
+			usr.Password = "testowe" //just tu print unfriendly field
 		}
 		usrs = append(usrs, usr)
 	}
