@@ -28,6 +28,7 @@ type User struct {
 	ID       primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Login    string             `json:"login,omitempty" bson:"login,omitempty"`
 	Password string             `json:"password,omitempty" bson:"password,omitempty"`
+	Age      int                `json:"age,omitempty" bson:"age,omitempty"`
 	Version  Version            `json:"version,omitempty" bson:"version,omitempty"`
 	// CreatedAt primitive.DateTime `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 }

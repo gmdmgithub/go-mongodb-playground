@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func (s *server) routes() {
@@ -44,9 +45,17 @@ func (s *server) handleFilterUser(w http.ResponseWriter, r *http.Request) {
 	log.Print("handleFilterUser start")
 	defer log.Print("handleFilterUser end")
 
+	options := options.FindOptions{}
+	// Sort by `login` field descending
+	// options.Sort = bson.D{{"login", -1}}//Composite literal uses unkeyed fields
+	options.Sort = bson.D{primitive.E{Key: "login", Value: -1}}
+	options.SetLimit(100)
+	// options.SetSkip(1)//just for test
+
 	params := r.URL.Query()
 	filter := bson.M{}
 	var id primitive.ObjectID
+	// ID requires object ID
 	if _, ok := params["id"]; ok {
 		id, _ = primitive.ObjectIDFromHex(params.Get("id"))
 		filter["_id"] = id
@@ -54,11 +63,27 @@ func (s *server) handleFilterUser(w http.ResponseWriter, r *http.Request) {
 	if _, ok := params["login"]; ok {
 
 		// filter = bson.M{"login": bson.M{"$regex": params.Get("login")}}//it works!!
-		filter["login"] = bson.M{"$regex": params.Get("login")} //works but with case sensitivity
-		// filter["login"] = bson.M{"$regex": params.Get("login")} //bson.M{{"$options": "i"}
+		filter["login"] = bson.M{"$regex": params.Get("login")}          //works but with case sensitivity
+		filter["login"] = bson.M{"$regex": `(?i)` + params.Get("login")} //this magic works
+
+		// it's a hack - just for test the range
+		filter["age"] = bson.M{"$gte": 19, "$lte": 25}
+
 	}
 
-	cur, err := s.db.Collection("users").Find(s.c, filter)
+	// more sophisticated conditions - just for testing
+	conditions := bson.M{"name": bson.M{"$regex": "me"},
+		"$or": []bson.M{
+			bson.M{"repair": bson.M{"$eq": "ac"}},
+		},
+		"$and": []bson.M{
+			bson.M{"repair": bson.M{"$eq": "tv"}},
+			bson.M{"phone": bson.M{"$gte": 1091, "$lte": 1100}},
+		}}
+
+	log.Printf("Conditions %+v", conditions)
+
+	cur, err := s.db.Collection("users").Find(s.c, filter, &options)
 	if err != nil {
 		log.Printf("Problem ... %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -67,7 +92,6 @@ func (s *server) handleFilterUser(w http.ResponseWriter, r *http.Request) {
 	defer cur.Close(s.c)
 
 	var usrs []User
-
 	log.Printf("Cursor: %v", cur)
 
 	for cur.Next(s.c) {
@@ -92,7 +116,6 @@ func (s *server) handleFilterUser(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{ "message": "` + err.Error() + `" }`))
 		return
 	}
-	log.Printf("Users: %+v", usrs)
 	if err := json.NewEncoder(w).Encode(usrs); err != nil {
 		log.Printf(" json Problem ... %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
