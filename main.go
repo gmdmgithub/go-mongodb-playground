@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -31,6 +32,20 @@ type User struct {
 	Age      int                `json:"age,omitempty" bson:"age,omitempty"`
 	Version  Version            `json:"version,omitempty" bson:"version,omitempty"`
 	// CreatedAt primitive.DateTime `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
+}
+
+// OK - check if user data are ok
+func (u *User) OK() error {
+
+	if u.Login == "" || u.Password == "" {
+		return errors.New("login or passward are required")
+	}
+	return nil
+}
+
+// Valid - general interface to check if struct object are ok to pass them to action
+type Valid interface {
+	OK() error
 }
 
 func init() {

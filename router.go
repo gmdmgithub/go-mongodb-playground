@@ -168,7 +168,13 @@ func (s *server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Buffer: %+v\n", user)
+	// log.Printf("Buffer: %+v\n", user)
+
+	if err := user.OK(); err != nil {
+		log.Printf("Problem ... %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	params := mux.Vars(r)
 	id, _ := primitive.ObjectIDFromHex(params["id"])
@@ -301,7 +307,14 @@ func (s *server) handleAdduser() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		log.Printf("Buffer: %+v\n", user)
+
+		if err := user.OK(); err != nil {
+			log.Printf("Problem ... %v\n", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// log.Printf("Buffer: %+v\n", user)
 
 		// rlt, err := ioutil.ReadAll(r.Body)
 		// if err != nil {
