@@ -298,8 +298,8 @@ func (s *server) handleAdduser() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		log.Print("handleAdduser start")
-		defer log.Print("handleAdduser end")
+		last := TakeTime("handleAdduser")
+		defer last()
 
 		var user User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
